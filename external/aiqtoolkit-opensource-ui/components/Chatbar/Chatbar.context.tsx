@@ -3,7 +3,7 @@ import { Dispatch, createContext } from 'react';
 import { ActionType } from '@/hooks/useCreateReducer';
 
 import { Conversation } from '@/types/chat';
-import { SupportedExportFormats } from '@/types/export';
+import { ImportedFile } from '@/types/import';
 
 import { ChatbarInitialState } from './Chatbar.state';
 
@@ -13,7 +13,7 @@ export interface ChatbarContextProps {
   handleDeleteConversation: (conversation: Conversation) => void;
   handleClearConversations: () => void;
   handleExportData: () => void;
-  handleImportConversations: (data: SupportedExportFormats) => void;
+  handleImportConversations: (data: ImportedFile) => Promise<void>;
 }
 
 const ChatbarContext = createContext<ChatbarContextProps>(undefined!);

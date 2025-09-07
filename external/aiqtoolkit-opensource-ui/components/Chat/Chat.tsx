@@ -133,6 +133,133 @@ export const Chat = () => {
     };
   }, [webSocketModeRef?.current, webSocketURL]);
 
+  // Event listener for medical analysis trigger
+  useEffect(() => {
+    const handleMedicalAnalysis = async (event: CustomEvent) => {
+      const { conversationId, userMessage, conversation } = event.detail;
+      console.log('Medical analysis triggered for conversation:', conversationId);
+      
+      // Check if this is the selected conversation and it doesn't have an assistant response yet
+      if (selectedConversation?.id === conversationId) {
+        const hasAssistantResponse = selectedConversation?.messages?.some(msg => msg.role === 'assistant');
+        
+        if (!hasAssistantResponse && userMessage) {
+          console.log('Triggering direct API call for medical analysis');
+          
+          // Call the backend API directly without adding a new message
+          try {
+            homeDispatch({ field: 'messageIsStreaming', value: true });
+            
+            const endpoint = getEndpoint();
+            const body = {
+              messages: conversation.messages,
+              additionalProps: {}
+            };
+
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(body),
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            let assistantResponse = '';
+
+            if (reader) {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n').filter(line => line.trim() !== '');
+                
+                for (const line of lines) {
+                  if (line.startsWith('data: ')) {
+                    const data = line.slice(6);
+                    if (data === '[DONE]') continue;
+                    
+                    try {
+                      const parsed = JSON.parse(data);
+                      if (parsed.choices?.[0]?.delta?.content) {
+                        assistantResponse += parsed.choices[0].delta.content;
+                        
+                        // Update the conversation with streaming response
+                        const updatedConversation = {
+                          ...selectedConversation,
+                          messages: [
+                            ...selectedConversation.messages,
+                            {
+                              id: Date.now().toString(),
+                              role: 'assistant' as const,
+                              content: assistantResponse,
+                            }
+                          ]
+                        };
+                        
+                        homeDispatch({ field: 'selectedConversation', value: updatedConversation });
+                      }
+                    } catch (parseError) {
+                      console.warn('Error parsing streaming response:', parseError);
+                    }
+                  }
+                }
+              }
+            }
+            
+            // Save the final conversation
+            if (assistantResponse) {
+              const finalConversation = {
+                ...selectedConversation,
+                messages: [
+                  ...selectedConversation.messages,
+                  {
+                    id: Date.now().toString(),
+                    role: 'assistant' as const,
+                    content: assistantResponse,
+                  }
+                ]
+              };
+              
+              homeDispatch({ field: 'selectedConversation', value: finalConversation });
+              
+              // Save to storage
+              const updatedConversations = conversations.map(conv => 
+                conv.id === finalConversation.id ? finalConversation : conv
+              );
+              homeDispatch({ field: 'conversations', value: updatedConversations });
+              sessionStorage.setItem('conversationHistory', JSON.stringify(updatedConversations));
+              sessionStorage.setItem('selectedConversation', JSON.stringify(finalConversation));
+            }
+            
+          } catch (error) {
+            console.error('Error in direct API call:', error);
+            // Fallback to the original method if direct API fails
+            setTimeout(() => {
+              handleSend(userMessage, 0, false);
+            }, 100);
+          } finally {
+            homeDispatch({ field: 'messageIsStreaming', value: false });
+          }
+        }
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('triggerMedicalAnalysis', handleMedicalAnalysis as EventListener);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('triggerMedicalAnalysis', handleMedicalAnalysis as EventListener);
+    };
+  }, [selectedConversation, conversations, homeDispatch]);
+
   const connectWebSocket = async (retryCount = 0) => {
 
     const maxRetries = 3;

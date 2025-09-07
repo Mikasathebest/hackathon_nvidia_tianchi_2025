@@ -168,7 +168,7 @@ const handler = async (req: Request): Promise<Response> => {
                     }
                   }
                   else {
-                    console.log('aiq - intermediate data is not enabled');
+                    // Silently skip intermediate data when not enabled
                   }
                 }
               }

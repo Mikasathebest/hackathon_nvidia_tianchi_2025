@@ -8,9 +8,11 @@ import {
   SupportedExportFormats,
 } from '@/types/export';
 import { FolderInterface } from '@/types/folder';
-import { Prompt } from '@/types/prompt';
+import { Prompt } from '../../types/prompt';
+import { ImportedFile } from '@/types/import';
 
 import { cleanConversationHistory } from './clean';
+import { extractTextFromPDF, extractTextFromImage, createMedicalReportConversation } from './textExtraction';
 
 export function isExportFormatV1(obj: any): obj is ExportFormatV1 {
   return Array.isArray(obj);
@@ -107,6 +109,50 @@ export const exportData = () => {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+};
+
+// New function to handle ImportedFile
+export const importFile = async (
+  importedFile: ImportedFile,
+): Promise<LatestExportFormat> => {
+  if (importedFile.type === 'json') {
+    // Handle JSON files - return the cleaned data without session storage manipulation
+    return cleanData(importedFile.data as SupportedExportFormats);
+  } else if (importedFile.type === 'pdf') {
+    // Extract text from PDF and create medical analysis conversation
+    try {
+      const extractedText = await extractTextFromPDF(importedFile.data as File);
+      const conversation = createMedicalReportConversation(extractedText, importedFile.fileName);
+      
+      // Create the format with the new conversation (no session storage handling here)
+      return {
+        version: 4,
+        history: [conversation],
+        folders: [],
+        prompts: [],
+      };
+    } catch (error) {
+      throw new Error(`PDF processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  } else if (importedFile.type === 'image') {
+    // Extract text from image using OCR and create medical analysis conversation
+    try {
+      const extractedText = await extractTextFromImage(importedFile.data as File);
+      const conversation = createMedicalReportConversation(extractedText, importedFile.fileName);
+      
+      // Create the format with the new conversation (no session storage handling here)
+      return {
+        version: 4,
+        history: [conversation],
+        folders: [],
+        prompts: [],
+      };
+    } catch (error) {
+      throw new Error(`Image OCR processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  } else {
+    throw new Error('Unsupported file type');
+  }
 };
 
 export const importData = (

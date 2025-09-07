@@ -51,19 +51,19 @@ export const ChatHeader = ({ webSocketModeRef = {} }) => {
     }, []);
 
     return (
-        <div className={`top-0 z-10 flex justify-center items-center h-12 ${selectedConversation?.messages?.length === 0 ? 'bg-none' : 'bg-[#76b900] sticky'}  py-2 px-4 text-sm text-white dark:border-none dark:bg-black dark:text-neutral-200`}>
+        <div className={`top-0 z-10 flex justify-center items-center h-12 ${selectedConversation?.messages?.length === 0 ? 'bg-none' : 'bg-gray-300 sticky'}  py-2 px-4 text-sm text-gray-800 dark:border-none dark:bg-black dark:text-neutral-200`}>
             {
                 selectedConversation?.messages?.length > 0 ? 
                 <div className={`absolute top-6 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}>
-                    <span className="text-lg font-semibold text-white">{workflow}</span>
+                    <span className="text-lg font-semibold text-gray-800">{workflow}</span>
                 </div> 
                 :
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 mx-auto flex flex-col space-y-5 md:space-y-10 px-3 pt-5 md:pt-12 sm:max-w-[600px] text-center">
                   <div className="text-3xl font-semibold text-gray-800 dark:text-white">
-                    Hi, I'm {workflow}
+                    体检分析助手
                   </div>
                   <div className="text-lg text-gray-600 dark:text-gray-400">
-                    How can I assist you today?
+                    上传体检报告 提供专业分析
                   </div>
                 </div>
             } 

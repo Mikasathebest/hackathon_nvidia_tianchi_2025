@@ -176,7 +176,7 @@ llms:
   default_llm:
     _type: openai
     model_name: "qwen-plus"
-    api_key: "Your API Key"
+    api_key: "sk-49f5af22a09642d3bd32588850d930e8"
     base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
     temperature: 0.7
     max_tokens: 2048
@@ -250,10 +250,6 @@ echo "🌐 访问地址:"
 echo "   前端界面: http://localhost:3000"
 echo "   API文档:  http://localhost:8001/docs"
 echo ""
-echo "📝 测试建议:"
-echo "   1. 天气查询: '北京今天的天气怎么样，气温是多少？'"
-echo "   2. 公司信息: '帮我介绍一下NVIDIA Agent Intelligence Toolkit'"
-echo "   3. 时间查询: '现在几点了？'"
 echo ""
 echo "🛑 停止服务: 按 Ctrl+C 或运行 ./stop.sh"
 echo ""

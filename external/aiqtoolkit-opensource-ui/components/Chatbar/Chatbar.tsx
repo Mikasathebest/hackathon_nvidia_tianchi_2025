@@ -6,10 +6,11 @@ import { useCreateReducer } from '@/hooks/useCreateReducer';
 
 import { saveConversation, saveConversations } from '@/utils/app/conversation';
 import { saveFolders } from '@/utils/app/folders';
-import { exportData, importData } from '@/utils/app/importExport';
+import { exportData, importData, importFile } from '@/utils/app/importExport';
 
 import { Conversation } from '@/types/chat';
-import { LatestExportFormat, SupportedExportFormats } from '@/types/export';
+import { LatestExportFormat } from '@/types/export';
+import { ImportedFile } from '@/types/import';
 
 import HomeContext from '@/pages/api/home/home.context';
 
@@ -47,17 +48,83 @@ export const Chatbar = () => {
     exportData();
   };
 
-  const handleImportConversations = (data: SupportedExportFormats) => {
-    const { history, folders, prompts }: LatestExportFormat = importData(data);
-    homeDispatch({ field: 'conversations', value: history });
-    homeDispatch({
-      field: 'selectedConversation',
-      value: history[history.length - 1],
-    });
-    homeDispatch({ field: 'folders', value: folders });
-    homeDispatch({ field: 'prompts', value: prompts });
+  // Function to trigger medical analysis after PDF/image processing
+  const triggerMedicalAnalysis = async (conversation: Conversation) => {
+    try {
+      console.log('Triggering medical analysis for conversation:', conversation.id);
+      
+      // Find the user message in the conversation
+      const userMessage = conversation.messages.find(msg => msg.role === 'user');
+      if (!userMessage) {
+        console.error('No user message found in conversation');
+        return;
+      }
 
-    window.location.reload();
+      // Create a custom event to trigger the chat submission
+      const chatEvent = new CustomEvent('triggerMedicalAnalysis', {
+        detail: {
+          conversationId: conversation.id,
+          userMessage: userMessage,
+          conversation: conversation
+        }
+      });
+      
+      // Dispatch the event for the Chat component to handle
+      window.dispatchEvent(chatEvent);
+      
+    } catch (error) {
+      console.error('Error triggering medical analysis:', error);
+    }
+  };
+
+  const handleImportConversations = async (importedFile: ImportedFile) => {
+    try {
+      // Show loading state
+      const loadingToast = 'Processing file...';
+      console.log(loadingToast);
+      
+      const { history, folders: importedFolders, prompts }: LatestExportFormat = await importFile(importedFile);
+      
+      // Get current conversations from state to merge with new ones
+      const currentConversations = conversations || [];
+      const mergedConversations = [...currentConversations, ...history];
+      
+      // Update the conversations list
+      homeDispatch({ field: 'conversations', value: mergedConversations });
+      
+      // Select the newly imported conversation (last one in history)
+      const newConversation = history[history.length - 1];
+      homeDispatch({
+        field: 'selectedConversation',
+        value: newConversation,
+      });
+      
+      // Update folders if any
+      if (importedFolders && importedFolders.length > 0) {
+        const currentFolders = folders || [];
+        const mergedFolders = [...currentFolders, ...importedFolders];
+        homeDispatch({ field: 'folders', value: mergedFolders });
+      }
+      
+      // Store in session storage for persistence
+      sessionStorage.setItem('conversationHistory', JSON.stringify(mergedConversations));
+      sessionStorage.setItem('selectedConversation', JSON.stringify(newConversation));
+      
+      // Success message
+      if (importedFile.type === 'pdf' || importedFile.type === 'image') {
+        alert(`✅ Medical report processed successfully! A new conversation has been created with analysis of "${importedFile.fileName}". The AI will now analyze your report.`);
+      }
+
+      // Auto-trigger LLM analysis for medical reports
+      if (importedFile.type === 'pdf' || importedFile.type === 'image') {
+        // Trigger the analysis by sending the user message to the LLM
+        setTimeout(() => {
+          triggerMedicalAnalysis(newConversation);
+        }, 500); // Small delay to ensure UI is updated
+      }
+    } catch (error) {
+      alert(`❌ Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleClearConversations = () => {

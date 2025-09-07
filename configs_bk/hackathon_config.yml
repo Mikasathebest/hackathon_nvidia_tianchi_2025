@@ -17,20 +17,28 @@ functions:
     description: "获取当前日期和时间"
 
 llms:
-  # 默认使用Bailian API (用户可修改)
   default_llm:
     _type: openai
     model_name: "qwen-plus"
-    api_key: "Your API Key"
+    api_key: "sk-49f5af22a09642d3bd32588850d930e8"
     base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    temperature: 0.7
+    temperature: 0.6
     max_tokens: 2048
+  # vl:
+  #   _type: openai
+  #   model_name: "qwen-plus"
+  #   api_key: "sk-49f5af22a09642d3bd32588850d930e8"
+  #   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  #   temperature: 0.6
+  #   max_tokens: 2048
 
 workflow:
   _type: react_agent
   tool_names:
     - internet_search
-    - current_datetime
+    - 
+  system_prompt: |
+    You are good at helping people to check their body examination reports and recommend them to the proper department in the hospital.
   llm_name: default_llm
   verbose: true
   parse_agent_response_max_retries: 3

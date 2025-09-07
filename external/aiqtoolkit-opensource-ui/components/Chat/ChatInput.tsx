@@ -187,7 +187,7 @@ export const ChatInput = ({
   };
 
 
-  const processFile = ({ fullBase64String, file }: { fullBase64String: string, file: File }) => {
+  const processFile = async ({ fullBase64String, file }: { fullBase64String: string, file: File }) => {
     const [fileType] = file && file.type.split('/');
     if (!["image"].includes(fileType)) {
       alert(`Only supported file types are : ${["image"].join(', ')}`);
@@ -205,20 +205,59 @@ export const ChatInput = ({
     const shouldCompress = sizeInKB > 200;
 
     if (shouldCompress) {
-      compressImage(fullBase64String, file.type, true, (compressedBase64: string) => {
-        setInputFileContentCompressed(compressedBase64);
-        setInputFileContent(fullBase64String);
-        setInputFile(file?.name);
-        const extension = file.name.split('.').pop() ?? 'jpg';
-        setInputFileExtension(extension.toLowerCase());
+      compressImage(fullBase64String, file.type, true, async (compressedBase64: string) => {
+        // Extract text from image using OCR
+        try {
+          const { extractTextFromImage } = await import('@/utils/app/textExtraction');
+          const extractedText = await extractTextFromImage(file);
+          
+          // Create medical analysis prompt with extracted text
+          const medicalPrompt = `${extractedText}
+
+1. 请分析这份报告，详细分析每个异常指标,考虑异常指标之间的相关性。
+2. 根据用户的当前地理位置，使用tavily_search工具找到排名靠前的医院，推荐排名靠前的复查医院和科室。请用中文回复。`;
+
+          setContent(medicalPrompt);
+          setInputFileContentCompressed('');
+          setInputFileContent('');
+          setInputFile('');
+          setInputFileExtension('');
+        } catch (error) {
+          console.error('Error extracting text from image:', error);
+          // Fallback to original behavior
+          setInputFileContentCompressed(compressedBase64);
+          setInputFileContent(fullBase64String);
+          setInputFile(file?.name);
+          const extension = file.name.split('.').pop() ?? 'jpg';
+          setInputFileExtension(extension.toLowerCase());
+        }
       });
     } else {
-      // If no compression is needed, use the original image data
-      setInputFileContent(fullBase64String);
-      setInputFileContentCompressed(fullBase64String);
-      setInputFile(file.name);
-      const extension = file.name.split('.').pop() ?? 'jpg';
-      setInputFileExtension(extension.toLowerCase());
+      // If no compression is needed, extract text directly
+      try {
+        const { extractTextFromImage } = await import('@/utils/app/textExtraction');
+        const extractedText = await extractTextFromImage(file);
+        
+        // Create medical analysis prompt with extracted text
+        const medicalPrompt = `${extractedText}
+
+1. 请分析这份报告，详细分析每个异常指标,考虑异常指标之间的相关性。
+2. 根据用户的当前地理位置，使用tavily_search工具找到排名靠前的医院，推荐排名靠前的复查医院和科室。请用中文回复。`;
+
+        setContent(medicalPrompt);
+        setInputFileContent('');
+        setInputFileContentCompressed('');
+        setInputFile('');
+        setInputFileExtension('');
+      } catch (error) {
+        console.error('Error extracting text from image:', error);
+        // Fallback to original behavior
+        setInputFileContent(fullBase64String);
+        setInputFileContentCompressed(fullBase64String);
+        setInputFile(file.name);
+        const extension = file.name.split('.').pop() ?? 'jpg';
+        setInputFileExtension(extension.toLowerCase());
+      }
     }
   }
 

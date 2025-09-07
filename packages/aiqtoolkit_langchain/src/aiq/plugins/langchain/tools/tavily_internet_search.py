@@ -39,14 +39,39 @@ async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, bu
         os.environ["TAVILY_API_KEY"] = tool_config.api_key
     # This tavily tool requires an API Key and it must be set as an environment variable (TAVILY_API_KEY)
     # Refer to create_customize_workflow.md for instructions of getting the API key
-
+    print("DEBUG: tavily token:", os.environ.get("TAVILY_API_KEY"))
     async def _tavily_internet_search(question: str) -> str:
         # Search the web and get the requested amount of results
         tavily_search = TavilySearchResults(max_results=tool_config.max_results)
         search_docs = await tavily_search.ainvoke({'query': question})
-        # Format
-        web_search_results = "\n\n---\n\n".join(
-            [f'<Document href="{doc["url"]}"/>\n{doc["content"]}\n</Document>' for doc in search_docs])
+        
+        # Handle the response format robustly
+        try:
+            if isinstance(search_docs, list) and len(search_docs) > 0:
+                # Check if first item is a dictionary (expected format)
+                if isinstance(search_docs[0], dict):
+                    # Expected format: list of dictionaries with 'url' and 'content' keys
+                    formatted_docs = []
+                    for doc in search_docs:
+                        url = doc.get("url", "")
+                        content = doc.get("content", "")
+                        title = doc.get("title", "")
+                        formatted_docs.append(f'<Document href="{url}" title="{title}">\n{content}\n</Document>')
+                    web_search_results = "\n\n---\n\n".join(formatted_docs)
+                else:
+                    # Fallback: if items are strings, just join them
+                    web_search_results = "\n\n---\n\n".join(
+                        [f'<Document>\n{str(doc)}\n</Document>' for doc in search_docs])
+            elif isinstance(search_docs, str):
+                # Handle case where response is a single string
+                web_search_results = f"<Document>\n{search_docs}\n</Document>"
+            else:
+                # If search_docs is not a list, is empty, or unexpected format
+                web_search_results = f"<Document>\nSearch completed but no results found for query: {question}\n</Document>"
+        except Exception as e:
+            # Catch any unexpected errors and provide fallback
+            web_search_results = f"<Document>\nSearch error occurred: {str(e)}\nQuery: {question}\n</Document>"
+            
         return web_search_results
 
     # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
