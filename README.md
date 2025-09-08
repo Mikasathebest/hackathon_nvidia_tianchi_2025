@@ -4,7 +4,7 @@
 
 **🎯 官方竞赛链接**: [NVIDIA 2025 Hackathon 年度总决赛 - 开发者创新盛典](https://tianchi.aliyun.com/competition/entrance/532412)
 
-![医疗报告分析系统界面](docs/ui_screenshot.png)
+![医疗报告分析系统界面](docs/home.png)
 
 ## 🎯 项目简介
 
